@@ -1,15 +1,22 @@
 package uz.nt.springhibernate.repository;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.query.Query;
+import org.hibernate.query.criteria.internal.OrderImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import uz.nt.springhibernate.dto.ResponseDto;
 import uz.nt.springhibernate.model.Book;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,12 +63,15 @@ public class BookDao {
         }
     }
 
-    public List<Book> getAllBooksWithNativeQuery() {
+    public List<Book> getAllBooksWithNativeQuery(Integer id) {
 
         Session session = sessionFactory.openSession();
         try {
-            List<Book> bookList = session.createNativeQuery("Select * from book", Book.class).getResultList();
-            return bookList;
+            Query<Book> query = session.createNativeQuery("Select * from book where id = :id", Book.class);
+
+            query.setParameter("id", id);
+
+            return query.getResultList();
         }catch (Exception e){
             return null;
         }finally {
@@ -72,17 +82,25 @@ public class BookDao {
     public List<Book> getAllBooks() {
 
         Session session = sessionFactory.openSession();
-//        Transaction transaction = session.getTransaction();
+
         try {
-//            transaction.begin();
-//            List<Book> bookList = Collections.unmodifiableList(session.createCriteria(Book.class).list());
-            List<Book> bookList = session.createCriteria(Book.class).list();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
+            CriteriaQuery<Book> criteriaQuery = criteriaBuilder.createQuery(Book.class);
+            Root<Book> book = criteriaQuery.from(Book.class);
 
-//            transaction.commit();
-            return bookList;
+            criteriaQuery.select(book).where(
+                    criteriaBuilder.greaterThan(book.get("cost"), 100000),
+                    criteriaBuilder.between(book.get("pageCount"), 100, 200))
+            .orderBy(
+                    criteriaBuilder.asc(book.get("id"))
+            );
+            //select * from book where cost > 100000 and page_count between 100 and 200 order by id desc
+            Query<Book> query = session.createQuery(criteriaQuery);
+
+            return query.getResultList();
         }catch (Exception e){
-//            transaction.rollback();
+            e.printStackTrace();
             return null;
         }finally {
             session.close();

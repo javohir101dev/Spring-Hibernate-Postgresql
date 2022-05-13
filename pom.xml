@@ -14,7 +14,7 @@
 	<name>spring-hibernate</name>
 	<description>Project for integrating hibernate with spring boot</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>9</java.version>
 	</properties>
 	<dependencies>
 
