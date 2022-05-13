@@ -1,8 +1,8 @@
 package uz.nt.springhibernate.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
 import uz.nt.springhibernate.dto.ResponseDto;
 import uz.nt.springhibernate.model.Book;
 import uz.nt.springhibernate.repository.BookDao;
@@ -82,5 +82,13 @@ public class BookService {
             return new ResponseDto<>(false, -1, "Error in deleting book", null);
         }
         return new ResponseDto<>(true, 0, "Ok", deletedBook);
+    }
+
+    public ResponseDto<List<Book>> getAllBooksWithNativeQueryAndParams(MultiValueMap<String, String> params) {
+        List<Book> bookList = bookDao.getAllBooksWithNativeQueryAndParams(params);
+        if (bookList != null && !bookList.isEmpty()){
+            return new ResponseDto<>(true, 0, "Ok", bookList);
+        }
+        return new ResponseDto<>(false, -1, "Books is not found", null);
     }
 }

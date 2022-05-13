@@ -1,36 +1,40 @@
 package uz.nt.springhibernate.repository;
 
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
-import org.hibernate.criterion.Order;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
-import org.hibernate.query.criteria.internal.OrderImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
-import uz.nt.springhibernate.dto.ResponseDto;
+import org.springframework.util.MultiValueMap;
+import uz.nt.springhibernate.helper.NumberHelper;
+import uz.nt.springhibernate.helper.StringHelper;
 import uz.nt.springhibernate.model.Book;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
-import java.io.Serializable;
+import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Repository
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class BookDao {
 
-    private final SessionFactory sessionFactory;
 
-    public boolean addBook(Book book){
+
+
+    @Autowired
+    @Qualifier("postgres")
+    private   SessionFactory sessionFactory;
+
+    public boolean addBook(Book book) {
         Session session = sessionFactory.openSession();
         Transaction transaction = session.getTransaction();
         try {
@@ -39,78 +43,127 @@ public class BookDao {
             transaction.commit();
 
             return true;
-        }catch (Exception e){
+        } catch (Exception e) {
             transaction.rollback();
             return false;
-        }finally {
+        } finally {
             session.close();
         }
     }
 
     public Book getBookById(Integer id) {
         Session session = sessionFactory.openSession();
-        Transaction transaction = session.getTransaction();
         try {
-//            transaction.begin();
             Book book = session.get(Book.class, id);
-//            transaction.commit();
             return book;
-        }catch (Exception e){
-//            transaction.rollback();
+        } catch (Exception e) {
             return null;
-        }finally {
+        } finally {
             session.close();
         }
     }
 
-    public List<Book> getAllBooksWithNativeQuery(Integer id) {
+    public List<Book> getAllBooksWithNativeQueryAndParams(MultiValueMap<String, String> params) {
 
-        Session session = sessionFactory.openSession();
-        try {
-            Query<Book> query = session.createNativeQuery("Select * from book where id = :id", Book.class);
+        StringBuilder queryBuilder = new StringBuilder(" ");
+        if (params.containsKey("id") && NumberHelper.isValidNumber(params.getFirst("id"))) {
+            queryBuilder.append(" and b.id=:id ");
+        }
 
-            query.setParameter("id", id);
+        if (params.containsKey("genre") && StringHelper.isValid(params.getFirst("genre"))) {
+            queryBuilder.append(" and b.genre=:genre ");
+        }
+
+        if (params.containsKey("name") && StringHelper.isValid(params.getFirst("name"))) {
+            queryBuilder.append(" and b.nameuz=:name ");
+        }
+
+
+        try (Session session = sessionFactory.openSession()) {
+            String queryStr = "select * from book b where 1=1 " + queryBuilder;
+            Query<Book> query = session.createNativeQuery(queryStr, Book.class);
+
+            if (params.containsKey("id") && NumberHelper.isValidNumber(params.getFirst("id"))) {
+                query.setParameter("id", NumberHelper.tiInt(params.getFirst("id")));
+            }
+
+            if (params.containsKey("genre") && StringHelper.isValid(params.getFirst("genre"))) {
+                query.setParameter("genre", params.getFirst("genre"));
+            }
+
+            if (params.containsKey("name") && StringHelper.isValid(params.getFirst("name"))) {
+                query.setParameter("name", params.getFirst("name"));
+            }
 
             return query.getResultList();
-        }catch (Exception e){
+        } catch (Exception e) {
+            e.printStackTrace();
             return null;
-        }finally {
-            session.close();
+        }
+    }
+
+    public List<Book> getAllBooksWithNativeQuerySecondWay(MultiValueMap<String, String> params) {
+
+        List<Book> resulBookList = new ArrayList<>();
+
+        try (Session session = sessionFactory.openSession()) {
+
+            NativeQuery sqlQuery = session.createSQLQuery("select * from book ");
+            List<Object[]> rows = sqlQuery.list();
+
+            for (Object[] row : rows) {
+                Book queryBook = new Book();
+                queryBook.setId(row[0] == null ? null : Integer.valueOf(row[0].toString()));
+                queryBook.setCost(row[1] == null ? null : (BigDecimal) row[1]);
+                queryBook.setGenre(row[2] == null ? null : row[2].toString());
+                queryBook.setNameRu(row[3] == null ? null : row[3].toString());
+                queryBook.setNameUz(row[4] == null ? null : row[4].toString());
+                queryBook.setPageCount(row[5] == null ? null : Integer.valueOf(row[5].toString()));
+                queryBook.setPublishedDate(row[6] == null ? null : Date.valueOf(row[6].toString().substring(0, 10)));
+                queryBook.setAuthorId(row[7] == null ? null : Integer.valueOf(row[7].toString()));
+                queryBook.setPublisher(row[8] == null ? null : Integer.valueOf(row[8].toString()));
+                resulBookList.add(queryBook);
+            }
+            return resulBookList;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
     public List<Book> getAllBooks() {
 
-        Session session = sessionFactory.openSession();
+        try (Session session = sessionFactory.openSession()) {
 
-        try {
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
             CriteriaQuery<Book> criteriaQuery = criteriaBuilder.createQuery(Book.class);
-            Root<Book> book = criteriaQuery.from(Book.class);
 
-            criteriaQuery.select(book).where(
-                    criteriaBuilder.greaterThan(book.get("cost"), 100000),
-                    criteriaBuilder.between(book.get("pageCount"), 100, 200))
-            .orderBy(
-                    criteriaBuilder.asc(book.get("id"))
+            Root<Book> root = criteriaQuery.from(Book.class);
+            criteriaQuery.select(root).where(
+                    criteriaBuilder.gt(root.get("cost"), 100000),  // gt means greaterThan
+                    criteriaBuilder.between(root.get("pageCount"), 100, 200)
             );
-            //select * from book where cost > 100000 and page_count between 100 and 200 order by id desc
-            Query<Book> query = session.createQuery(criteriaQuery);
 
+            criteriaQuery.orderBy(
+                    criteriaBuilder.desc(root.get("pageCount")),
+                    criteriaBuilder.desc(root.get("id"))
+            );
+
+//            select * from book where cost > 100000 and page_count between 100 and 200 order by page_count desc, id desc
+
+            Query<Book> query = session.createQuery(criteriaQuery);
             return query.getResultList();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
-        }finally {
-            session.close();
         }
     }
 
     public Book updateBook(Book book) {
         Session session = sessionFactory.openSession();
         Transaction transaction = session.getTransaction();
-        try {
+        try (session) {
             transaction.begin();
 
             session.update(book);
@@ -118,11 +171,9 @@ public class BookDao {
             transaction.commit();
 
             return book;
-        }catch (Exception e){
+        } catch (Exception e) {
             transaction.rollback();
             return null;
-        }finally {
-            session.close();
         }
     }
 
@@ -137,26 +188,13 @@ public class BookDao {
             transaction.commit();
 
             return book;
-        }catch (Exception e){
+        } catch (Exception e) {
             transaction.rollback();
             return null;
-        }finally {
+        } finally {
             session.close();
         }
     }
-
-
-//    NativeQuery sqlQuery = session.createSQLQuery("select * from book where id = :id ");
-//        sqlQuery.setParameter("id", 4);
-//    List <Object[]> rows = sqlQuery.list();
-//
-//        for (Object[] row : rows) {
-//        Book book2 = new Book();
-//        book2.setId(Integer.parseInt(row[0].toString()));
-//        System.out.println(book2);
-//    }
-
-//    List<Book> resultList = session.createNativeQuery("Select * from book", Book.class).getResultList();
 
 
 }

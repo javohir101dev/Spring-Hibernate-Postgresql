@@ -16,17 +16,17 @@ import java.util.Properties;
 @EnableTransactionManagement
 public class HibernateConfig {
 
-    @Bean
+    @Bean("postgres")
     public LocalSessionFactoryBean sessionFactory(){
         LocalSessionFactoryBean sessionFactoryBean = new LocalSessionFactoryBean();
 
-        sessionFactoryBean.setDataSource(dataSource());
+        sessionFactoryBean.setDataSource(dataSourcePostgres());
         sessionFactoryBean.setPackagesToScan("uz.nt.springhibernate.model");
-        sessionFactoryBean.setHibernateProperties(hibernateProperties());
+        sessionFactoryBean.setHibernateProperties(hibernatePropertiesPostgres());
         return sessionFactoryBean;
     }
 
-    @Bean
+    @Bean()
     public PlatformTransactionManager  transactionManager(){
         HibernateTransactionManager hibernateTransactionManager = new HibernateTransactionManager();
         hibernateTransactionManager.setSessionFactory(sessionFactory().getObject());
@@ -34,23 +34,22 @@ public class HibernateConfig {
         return hibernateTransactionManager;
     }
 
-    @Bean
-    public DataSource dataSource(){
+    @Bean()
+    public DataSource dataSourcePostgres(){
         BasicDataSource dataSource = new BasicDataSource();
         dataSource.setUrl("jdbc:postgresql://localhost:5432/postgres");
         dataSource.setUsername("postgres");
-        dataSource.setPassword("imueaa0131");
+        dataSource.setPassword("postgres");
         dataSource.setDriverClassName("org.postgresql.Driver");
 
         return dataSource;
     }
 
-    private  Properties hibernateProperties(){
+    private  Properties hibernatePropertiesPostgres(){
         Properties properties = new Properties();
 
         properties.setProperty("hibernate.hbm2ddl.auto", "update");
         properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQL95Dialect");
-//        properties.setProperty()
 
         return properties;
     }
