@@ -16,8 +16,10 @@ import java.util.Properties;
 @EnableTransactionManagement
 public class HibernateConfig {
 
+//    For postgresql
+
     @Bean("postgres")
-    public LocalSessionFactoryBean sessionFactory(){
+    public LocalSessionFactoryBean sessionFactoryPostgres() {
         LocalSessionFactoryBean sessionFactoryBean = new LocalSessionFactoryBean();
 
         sessionFactoryBean.setDataSource(dataSourcePostgres());
@@ -27,15 +29,15 @@ public class HibernateConfig {
     }
 
     @Bean()
-    public PlatformTransactionManager  transactionManager(){
+    public PlatformTransactionManager transactionManagerPostgres() {
         HibernateTransactionManager hibernateTransactionManager = new HibernateTransactionManager();
-        hibernateTransactionManager.setSessionFactory(sessionFactory().getObject());
+        hibernateTransactionManager.setSessionFactory(sessionFactoryPostgres().getObject());
 
         return hibernateTransactionManager;
     }
 
     @Bean()
-    public DataSource dataSourcePostgres(){
+    public DataSource dataSourcePostgres() {
         BasicDataSource dataSource = new BasicDataSource();
         dataSource.setUrl("jdbc:postgresql://localhost:5432/postgres");
         dataSource.setUsername("postgres");
@@ -45,13 +47,55 @@ public class HibernateConfig {
         return dataSource;
     }
 
-    private  Properties hibernatePropertiesPostgres(){
+    private Properties hibernatePropertiesPostgres() {
         Properties properties = new Properties();
 
         properties.setProperty("hibernate.hbm2ddl.auto", "update");
         properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQL95Dialect");
 
         return properties;
+    }
+
+//    MySQL
+
+    @Bean("mysql")
+    public LocalSessionFactoryBean sessionFactoryMySQL() {
+        LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+        sessionFactory.setDataSource(dataSourceMySQL());
+        sessionFactory.setPackagesToScan(
+                "uz.nt.springhibernate.model");
+        sessionFactory.setHibernateProperties(hibernatePropertiesMySQL());
+
+        return sessionFactory;
+    }
+
+    @Bean
+    public DataSource dataSourceMySQL() {
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://localhost:3306/book_store");
+        dataSource.setUsername("root");
+        dataSource.setPassword("root123");
+
+        return dataSource;
+    }
+
+    @Bean
+    public PlatformTransactionManager hibernateTransactionManagerMySQL() {
+        HibernateTransactionManager transactionManager
+                = new HibernateTransactionManager();
+        transactionManager.setSessionFactory(sessionFactoryMySQL().getObject());
+        return transactionManager;
+    }
+
+    private final Properties hibernatePropertiesMySQL() {
+        Properties hibernateProperties = new Properties();
+        hibernateProperties.setProperty(
+        "hibernate.hbm2ddl.auto", "update");
+        hibernateProperties.setProperty(
+                "hibernate.dialect", "org.hibernate.dialect.MySQL5Dialect");
+
+        return hibernateProperties;
     }
 
 }

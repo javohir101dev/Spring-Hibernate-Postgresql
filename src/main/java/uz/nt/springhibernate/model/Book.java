@@ -16,8 +16,9 @@ import java.sql.Date;
 public class Book {
 
     @Id
-    @GeneratedValue(generator = "book_id_seq")
-    @SequenceGenerator(name = "book_id_seq", sequenceName = "book_id_seq", allocationSize = 1)
+//    @GeneratedValue(generator = "book_id_seq")
+//    @SequenceGenerator(name = "book_id_seq", sequenceName = "book_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Integer id;
 

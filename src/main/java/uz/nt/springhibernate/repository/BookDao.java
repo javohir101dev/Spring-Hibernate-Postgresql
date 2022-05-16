@@ -1,19 +1,18 @@
 package uz.nt.springhibernate.repository;
 
-import lombok.RequiredArgsConstructor;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.MultiValueMap;
 import uz.nt.springhibernate.helper.NumberHelper;
 import uz.nt.springhibernate.helper.StringHelper;
 import uz.nt.springhibernate.model.Book;
 
+import javax.annotation.Resource;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
@@ -28,14 +27,8 @@ import java.util.List;
 public class BookDao {
 
 
-
-
-    @Autowired
-    @Qualifier("postgres")
-    private   SessionFactory sessionFactory;
-
-    public boolean addBook(Book book) {
-        Session session = sessionFactory.openSession();
+    public boolean addBookPostgres(Book book, SessionFactory postgresSession) {
+        Session session = postgresSession.openSession();
         Transaction transaction = session.getTransaction();
         try {
             transaction.begin();
@@ -51,8 +44,8 @@ public class BookDao {
         }
     }
 
-    public Book getBookById(Integer id) {
-        Session session = sessionFactory.openSession();
+    public Book getBookByIdPostgres(Integer id, SessionFactory postgresSession) {
+        Session session = postgresSession.openSession();
         try {
             Book book = session.get(Book.class, id);
             return book;
@@ -63,7 +56,9 @@ public class BookDao {
         }
     }
 
-    public List<Book> getAllBooksWithNativeQueryAndParams(MultiValueMap<String, String> params) {
+    public List<Book> getAllBooksWithNativeQueryAndParamsPostgres(MultiValueMap<String,
+            String> params,
+                                                                  SessionFactory postgresSession) {
 
         StringBuilder queryBuilder = new StringBuilder(" ");
         if (params.containsKey("id") && NumberHelper.isValidNumber(params.getFirst("id"))) {
@@ -79,7 +74,7 @@ public class BookDao {
         }
 
 
-        try (Session session = sessionFactory.openSession()) {
+        try (Session session = postgresSession.openSession()) {
             String queryStr = "select * from book b where 1=1 " + queryBuilder;
             Query<Book> query = session.createNativeQuery(queryStr, Book.class);
 
@@ -102,11 +97,12 @@ public class BookDao {
         }
     }
 
-    public List<Book> getAllBooksWithNativeQuerySecondWay(MultiValueMap<String, String> params) {
+    public List<Book> getAllBooksWithNativeQuerySecondWayPostgres(MultiValueMap<String, String> params,
+                                                                  SessionFactory postgresSession) {
 
         List<Book> resulBookList = new ArrayList<>();
 
-        try (Session session = sessionFactory.openSession()) {
+        try (Session session = postgresSession.openSession()) {
 
             NativeQuery sqlQuery = session.createSQLQuery("select * from book ");
             List<Object[]> rows = sqlQuery.list();
@@ -131,9 +127,9 @@ public class BookDao {
         }
     }
 
-    public List<Book> getAllBooks() {
+    public List<Book> getAllBooksPostgres( SessionFactory postgresSession) {
 
-        try (Session session = sessionFactory.openSession()) {
+        try (Session session = postgresSession.openSession()) {
 
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
@@ -160,8 +156,8 @@ public class BookDao {
         }
     }
 
-    public Book updateBook(Book book) {
-        Session session = sessionFactory.openSession();
+    public Book updateBookPostgres(Book book, SessionFactory postgresSession) {
+        Session session = postgresSession.openSession();
         Transaction transaction = session.getTransaction();
         try (session) {
             transaction.begin();
@@ -177,8 +173,8 @@ public class BookDao {
         }
     }
 
-    public Book deleteBookById(Book book) {
-        Session session = sessionFactory.openSession();
+    public Book deleteBookByIdPostgres(Book book, SessionFactory postgresSession) {
+        Session session = postgresSession.openSession();
         Transaction transaction = session.getTransaction();
         try {
             transaction.begin();
